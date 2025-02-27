@@ -22,15 +22,6 @@ class HelloWorldApp < Sinatra::Base
     set :show_exceptions, true
     set :environment, :production
     set :host_authorization, { permitted_hosts: [] }
-    # Start the permissions watcher when the app starts
-    permissions_watcher = PermissionsManager.new(File.expand_path('.'))
-    permissions_watcher.fix_permissions
-    permissions_watcher.start_watcher
-    
-    # Ensure the watcher is stopped when the app exits
-    at_exit do
-      permissions_watcher.stop_watcher
-    end
   end
 
   before do
@@ -62,37 +53,6 @@ class HelloWorldApp < Sinatra::Base
     response.headers["Access-Control-Allow-Headers"] = "Authorization, Content-Type, Accept, X-User-Email, X-Auth-Token"
     response.headers["Access-Control-Allow-Origin"] = "*"
     200
-  end
-
-  # Add this near the top of the class, after the configure blocks
-  require_relative 'permissions'
-  
-  # Add this helper method
-  def authorized?
-    # In production, you'd want proper authentication
-    # This is just a basic example using an env variable
-    auth_token = ENV['ADMIN_TOKEN']
-    provided_token = request.env['HTTP_X_ADMIN_TOKEN']
-    
-    auth_token && !auth_token.empty? && auth_token == provided_token
-  end
-
-  # Add this new route
-  post '/admin/fix-permissions' do
-    content_type :json
-    
-    unless authorized?
-      status 401
-      return { error: 'Unauthorized' }.to_json
-    end
-
-    begin
-      PermissionsManager.fix_permissions
-      { status: 'success', message: 'Permissions updated successfully' }.to_json
-    rescue => e
-      status 500
-      { status: 'error', message: e.message }.to_json
-    end
   end
 end
 
