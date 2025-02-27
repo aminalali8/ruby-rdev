@@ -4,7 +4,11 @@ require 'sinatra/reloader'
 class HelloWorldApp < Sinatra::Base
   configure :development do
     register Sinatra::Reloader
-    also_reload './views/**/*.erb'  # Also reload view files
+    # Enable code reloading
+    also_reload File.expand_path('../*.rb', __FILE__)
+    also_reload File.expand_path('../views/**/*.erb', __FILE__)
+    enable :reloader
+    set :reload_templates, true
   end
 
   configure do
@@ -16,6 +20,11 @@ class HelloWorldApp < Sinatra::Base
     erb :index
   end
 
+  # Add this new route without rebuilding
+  get '/test' do
+    'This is a new route - no rebuild needed!'
+  end
+
   # API endpoint example
   get '/api/status' do
     content_type :json
@@ -23,6 +32,5 @@ class HelloWorldApp < Sinatra::Base
   end
 end
 
-if __FILE__ == $0
-  HelloWorldApp.run!
-end 
+# Run the application
+run HelloWorldApp.run! if __FILE__ == $0 
