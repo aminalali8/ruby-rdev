@@ -5,8 +5,8 @@ RUN apt-get update && apt-get install -y \
     supervisor \
     && rm -rf /var/lib/apt/lists/*
 
-# Create non-root user
-RUN groupadd -r appuser && useradd -r -g appuser -u 1000 appuser
+# Create non-root user with matching group ID
+RUN groupadd -r -g 1000 appuser && useradd -r -g appuser -u 1000 appuser
 
 WORKDIR /app
 
@@ -20,8 +20,9 @@ COPY . .
 # Copy supervisor configuration
 COPY supervisord.conf /etc/supervisor/conf.d/supervisord.conf
 
-# Set ownership to appuser
-RUN chown -R appuser:appuser /app
+# Set ownership to appuser:appuser explicitly
+RUN chown -R appuser:appuser /app && \
+    chmod -R 755 /app
 
 EXPOSE 3000
 

@@ -2,6 +2,7 @@
 
 require 'fileutils'
 require 'listen'
+require 'etc'
 
 class PermissionsManager
   DEFAULT_FILE_MODE = 0644    # rw-r--r--
@@ -18,10 +19,28 @@ class PermissionsManager
   def initialize(root_path)
     @root_path = root_path
     @listener = nil
+    
+    # Add debug info about current process
+    puts "Process running as: #{Process.uid}:#{Process.gid}"
+    
+    begin
+      @app_user = Etc.getpwnam('appuser')
+      @app_uid = @app_user.uid
+      @app_gid = @app_user.gid
+      puts "Found appuser with uid:gid = #{@app_uid}:#{@app_gid}"
+    rescue => e
+      puts "Error getting appuser info: #{e.message}"
+      # Fallback to 1000:1000
+      @app_uid = 1000
+      @app_gid = 1000
+      puts "Falling back to uid:gid = #{@app_uid}:#{@app_gid}"
+    end
   end
 
   def fix_permissions
-    puts "Fixing permissions in #{@root_path}..."
+    puts "\nStarting permissions fix..."
+    puts "Current directory: #{Dir.pwd}"
+    puts "Target directory: #{@root_path}"
     
     Dir.glob("#{@root_path}/**/*", File::FNM_DOTMATCH).each do |path|
       next if path =~ /\/\.{1,2}$/  # Skip . and .. directories
@@ -58,15 +77,26 @@ class PermissionsManager
 
   def fix_path_permissions(path)
     begin
+      current_stat = File.stat(path)
+      puts "\nProcessing: #{path}"
+      puts "Current ownership: #{current_stat.uid}:#{current_stat.gid}"
+      puts "Current mode: #{current_stat.mode.to_s(8)}"
+      
+      # Force ownership to 1000:1000
+      system("chown -h 1000:1000 #{path.shellescape}")
+      
       if File.directory?(path)
-        FileUtils.chmod(DEFAULT_DIR_MODE, path)
-        puts "Set directory permissions for: #{path}"
+        system("chmod 755 #{path.shellescape}")
+        new_stat = File.stat(path)
+        puts "Updated directory to #{new_stat.mode.to_s(8)} 1000:1000"
       else
-        FileUtils.chmod(DEFAULT_FILE_MODE, path)
-        puts "Set file permissions for: #{path}"
+        system("chmod 644 #{path.shellescape}")
+        new_stat = File.stat(path)
+        puts "Updated file to #{new_stat.mode.to_s(8)} 1000:1000"
       end
     rescue => e
-      puts "Error setting permissions for #{path}: #{e.message}"
+      puts "Error processing #{path}: #{e.message}"
+      puts e.backtrace.join("\n")
     end
   end
 end
