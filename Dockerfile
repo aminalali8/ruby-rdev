@@ -6,8 +6,12 @@ RUN apt-get update && apt-get install -y \
 
 WORKDIR /app
 
+# Copy Gemfile first to leverage Docker cache
 COPY Gemfile Gemfile.lock* ./
 RUN bundle install
+
+# Copy the rest of the application
+COPY . .
 
 EXPOSE 3000
 
