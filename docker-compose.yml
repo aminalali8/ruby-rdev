@@ -8,3 +8,19 @@ services:
     environment:
       - RACK_ENV=development
     command: bundle exec rackup -o 0.0.0.0 -p 3000 config.ru
+    volumes:
+      - .:/app
+    depends_on:
+      - permissions-init
+
+  permissions-init:
+    image: alpine:latest
+    volumes:
+      - .:/app
+    command: >
+      sh -c "
+        chown -R 1000:1000 /app &&
+        chmod -R 755 /app &&
+        find /app -type f -exec chmod 644 {} \; &&
+        find /app -type d -exec chmod 755 {} \;"
+    user: root
