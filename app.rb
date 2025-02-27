@@ -1,24 +1,28 @@
 require 'sinatra'
+require 'sinatra/reloader'
 
 class HelloWorldApp < Sinatra::Base
-  # Configure the application
-  configure do
-    set :port, 3000  # Ensure this is set to 3000
-    set :bind, '0.0.0.0'  # This is important for Docker
+  configure :development do
+    register Sinatra::Reloader
+    also_reload './views/**/*.erb'  # Also reload view files
   end
 
-  # Define routes
+  configure do
+    set :bind, '0.0.0.0'
+    set :port, 3000
+  end
+
   get '/' do
     erb :index
   end
 
-  get '/api/greeting' do
+  # API endpoint example
+  get '/api/status' do
     content_type :json
-    { message: 'Hello, World!', time: Time.now }.to_json
+    { status: 'ok', time: Time.now }.to_json
   end
 end
 
-# Run the application if this file is executed directly
 if __FILE__ == $0
   HelloWorldApp.run!
 end 
