@@ -9,4 +9,4 @@ services:
       - .:/app
     environment:
       - RACK_ENV=development
-    command: bundle exec ruby app.rb 
+    command: bundle exec shotgun -o 0.0.0.0 -p 3000 app.rb 
