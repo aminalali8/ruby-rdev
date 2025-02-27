@@ -25,16 +25,30 @@ class PermissionsManager
   def start_watcher
     return if @listener
 
-    puts "Starting permission watcher for #{@root_path}..."
+    puts "\n=== Starting File Watcher ==="
+    puts "Watching directory: #{@root_path}"
     
-    @listener = Listen.to(@root_path) do |modified, added, _removed|
-      (modified + added).each do |path|
+    @listener = Listen.to(@root_path, force_polling: true, latency: 0.1) do |modified, added, removed|
+      puts "\n=== Changes Detected ==="
+      
+      modified.each do |path|
+        puts "Modified: #{path}"
         fix_path_permissions(path)
+      end
+      
+      added.each do |path|
+        puts "Added: #{path}"
+        fix_path_permissions(path)
+      end
+      
+      removed.each do |path|
+        puts "Removed: #{path}"
       end
     end
 
     @listener.start
-    puts "Permission watcher started successfully!"
+    puts "Watcher started successfully!"
+    puts "Waiting for file changes..."
   end
 
   def stop_watcher
@@ -51,13 +65,13 @@ class PermissionsManager
     begin
       if File.directory?(path)
         system("chmod 777 #{path.shellescape}")
-        puts "Set directory permissions for: #{path}"
+        puts ">>> Set directory permissions (777) for: #{path}"
       else
         system("chmod 666 #{path.shellescape}")
-        puts "Set file permissions for: #{path}"
+        puts ">>> Set file permissions (666) for: #{path}"
       end
     rescue => e
-      puts "Error processing #{path}: #{e.message}"
+      puts "!!! Error processing #{path}: #{e.message}"
       puts e.backtrace.join("\n")
     end
   end
@@ -70,6 +84,7 @@ if __FILE__ == $0
   watcher.start_watcher
   
   begin
+    puts "\nWatcher is running. Press Ctrl+C to stop."
     sleep
   rescue Interrupt
     puts "\nStopping watcher..."
